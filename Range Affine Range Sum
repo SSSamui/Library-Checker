@@ -1,0 +1,133 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cmath>
+using namespace std;
+using ll = long long;
+
+const int MAXN = 6e5;
+const ll MOD = 998244353;
+
+struct node
+{
+	ll val;
+	ll lzb, lzc;
+};
+
+ll a[MAXN];
+node tree[2 * MAXN];
+
+void pushup(int p)
+{
+	tree[p].val = tree[2 * p].val + tree[2 * p + 1].val;
+	tree[p].val %= MOD;
+}
+
+void pushdown(int p, int l, int mid, int r)
+{
+	if ((tree[p].lzb != 1) || (tree[p].lzc != 0))
+	{
+		tree[2 * p].lzb *= tree[p].lzb, tree[2 * p].lzc *= tree[p].lzb;
+		tree[2 * p].lzb %= MOD, tree[2 * p].lzc %= MOD;
+		tree[2 * p].lzc += tree[p].lzc;
+		tree[2 * p].lzc %= MOD;
+		
+		tree[2 * p].val *= tree[p].lzb;
+		tree[2 * p].val %= MOD;
+		tree[2 * p].val += tree[p].lzc * (mid - l + 1);
+		tree[2 * p].val %= MOD;
+
+		tree[2 * p + 1].lzb *= tree[p].lzb, tree[2 * p + 1].lzc *= tree[p].lzb;
+		tree[2 * p + 1].lzb %= MOD, tree[2 * p + 1].lzc %= MOD;
+		tree[2 * p + 1].lzc += tree[p].lzc;
+		tree[2 * p + 1].lzc %= MOD;
+
+		tree[2 * p + 1].val *= tree[p].lzb;
+		tree[2 * p + 1].val %= MOD;
+		tree[2 * p + 1].val += tree[p].lzc * (r - mid);
+		tree[2 * p + 1].val %= MOD;
+
+		tree[p].lzb = 1, tree[p].lzc = 0;
+	}
+}
+
+void build(int p, int l, int r)
+{
+	tree[p].lzb = 1, tree[p].lzc = 0;
+	if (l == r)
+	{
+		tree[p].val = a[l];
+		return;
+	}
+
+	int mid = l + (r - l) / 2;
+	build(2 * p, l, mid);
+	build(2 * p + 1, mid + 1, r);
+	pushup(p);
+}
+
+void update(int p, int l, int r, int a, int b, ll updb, ll updc)
+{
+	if ((a > r) || (b < l)) return;
+	if ((a <= l) && (r <= b))
+	{
+		tree[p].lzb *= updb, tree[p].lzc *= updb;
+		tree[p].lzb %= MOD, tree[p].lzc %= MOD;
+		tree[p].lzc += updc;
+		tree[p].lzc %= MOD;
+
+		tree[p].val *= updb;
+		tree[p].val %= MOD;
+		tree[p].val += updc * (r - l + 1);
+		tree[p].val %= MOD;
+
+		return;
+	}
+
+	int mid = l + (r - l) / 2;
+	pushdown(p, l, mid, r);
+	update(2 * p, l, mid, a, b, updb, updc);
+	update(2 * p + 1, mid + 1, r, a, b, updb, updc);
+	pushup(p);
+}
+
+ll query(int p, int l, int r, int a, int b)
+{
+	if ((a > r) || (b < l)) return 0;
+	if ((a <= l) && (r <= b)) return tree[p].val;
+	int mid = l + (r - l) / 2;
+	pushdown(p, l, mid, r);
+	ll ans = query(2 * p, l, mid, a, b) + query(2 * p + 1, mid + 1, r, a, b);
+	ans %= MOD;
+	return ans;
+}
+
+int main()
+{
+	ios::sync_with_stdio(false);
+	cin.tie(nullptr);
+
+	int n, q;
+	cin >> n >> q;
+	for (int i = 0; i < n; i++) cin >> a[i];
+	build(1, 0, n - 1);
+	while (q--)
+	{
+		int Q;
+		cin >> Q;
+		if (Q == 0)
+		{
+			int l, r;
+			ll b, c;
+			cin >> l >> r >> b >> c;
+			update(1, 0, n - 1, l, r - 1, b, c);
+		}
+
+		else
+		{
+			int l, r;
+			cin >> l >> r;
+			cout << query(1, 0, n - 1, l, r - 1) << "\n";
+		}
+	}
+}
